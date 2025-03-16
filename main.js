@@ -8,17 +8,38 @@ class CDN {
     }
 
     addModifiers() {
-        this.API.addModifier('htmlOutput', this.modifyHtmlOutput.bind(this), 1, this);
+        this.API.addModifier('htmlOutput', this.modifyHtmlOutput.bind(this), 999, this);
     }
 
     modifyHtmlOutput(renderer, htmlCode, globalContext, context) {
-        let newHtmlCode = "";
         if (this.config.cdnImages) {
-            newHtmlCode = replaceImageDomains(htmlCode, renderer.siteConfig.domain, this.config.url);
+            htmlCode = replaceImageDomains(htmlCode, renderer.siteConfig.domain, this.config.url);
         }
 
-        return newHtmlCode;
+        if (this.config.cdnGalleries) {
+            htmlCode = replaceGalleryLinks(htmlCode, renderer.siteConfig.domain, this.config.url, this.config.galleryItemSelector);
+        }
+
+        return htmlCode;
     }
+}
+
+function replaceGalleryLinks(htmlString, originalDomain, newDomain, elementSelector) {
+    const dom = new JSDOM(htmlString);
+
+    const doc = dom.window.document;
+
+    const galleryItemLinkElements = doc.querySelectorAll(elementSelector);
+
+    galleryItemLinkElements.forEach(a => {
+        let href = a.getAttribute('href');
+
+        if (href) {
+            a.setAttribute('href', replaceDomain(href, originalDomain, newDomain));
+        }
+    })
+
+    return dom.serialize();
 }
 
 function replaceImageDomains(htmlString, originalDomain, newDomain) {
@@ -30,11 +51,6 @@ function replaceImageDomains(htmlString, originalDomain, newDomain) {
 
     // Select all <img> elements in the document
     const imgElements = doc.querySelectorAll('img');
-
-    // Function to replace the domain in a URL
-    function replaceDomain(url, originalDomain, newDomain) {
-        return url.replace(originalDomain, newDomain);
-    }
 
     // Iterate over each <img> element
     imgElements.forEach(img => {
@@ -61,6 +77,10 @@ function replaceImageDomains(htmlString, originalDomain, newDomain) {
 
     // Serialize the entire DOM document back to a string
     return dom.serialize();
+}
+
+function replaceDomain(url, originalDomain, newDomain) {
+    return url.replace(originalDomain, newDomain);
 }
 
 module.exports = CDN;

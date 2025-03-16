@@ -20,6 +20,20 @@
       "group": "Asset Types",
       "value": "true",
       "type": "checkbox"
+    },
+    {
+      "name": "cdnGalleries",
+      "label": "Use CDN for Galleries",
+      "group": "Asset Types",
+      "value": "true",
+      "type": "checkbox"
+    },
+    {
+      "name": "galleryItemSelector",
+      "label": "Gallery item link class",
+      "group": "Selectors",
+      "value": "figure.gallery__item a",
+      "type": "text"
     }
   ]
 }
