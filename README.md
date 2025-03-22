@@ -1,5 +1,9 @@
 # Publii CDN Plugin
 
+<div align="center">
+    <img src="thumbnail.svg" style="max-width: 150px;" />
+</div>
+
 ## Introduction
 
 The CDN plugin for Publii simplifies the process of using a Content Delivery Network (CDN) with your Publii site. By replacing image URLs with your CDN domain, this plugin helps reduce bandwidth costs and improves page load times.
