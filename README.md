@@ -1,5 +1,3 @@
-# Publii CDN Plugin
-
 <div align="center">
     <img src="thumbnail.svg" width="150" height="150" />
 </div>
