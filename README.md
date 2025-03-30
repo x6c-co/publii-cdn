@@ -8,9 +8,17 @@ The CDN plugin for Publii simplifies the process of using a Content Delivery Net
 
 ## How it Works
 
+### Pull CDN
+
 1. Configure your CDN domain: Enter your CDN domain name in the plugin's settings page (e.g., `abcd1234.cloudfront.net`, `cdn.example.com`, etc.).
-2. Publish your site: When you publish your site, the plugin searches for image tags in the rendered HTML.
-3. Replace image URLs: The plugin replaces the `src` and `srcset` attributes of image tags with your CDN domain.
+2. Publish your site: When you publish your site, the plugin searches for image tags in the rendered HTML and replaces them with your CDN domain name.
+
+### Push CDN
+
+1. Configure your CDN domain: Enter your CDN domain name in the plugin's settings page (e.g., `abcd1234.cloudfront.net`, `cdn.example.com`, etc.).
+2. In Publii, go to "Tools & Plugins" > "File Manager", in the `root` directory, create a `.gitignore` with the following `media/*`.
+3. Publish your site: When you publish your site, the plugin searches for image tags in the rendered HTML and replaces them with your CDN domain name.
+4. Copy your `media` folder to your CDN of choice.
 
 ## Benefits
 
@@ -19,7 +27,6 @@ The CDN plugin for Publii simplifies the process of using a Content Delivery Net
 
 ## Important Notes
 
-- **Pull CDNs only**: This plugin is designed to work with pull CDNs, where the CDN fetches content from your origin server.
 - **Image optimization**: This plugin only optimizes image URLs and does not compress or optimize images themselves.
 
 ## Settings Page
