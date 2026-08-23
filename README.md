@@ -13,6 +13,10 @@ The CDN plugin for Publii simplifies the process of using a Content Delivery Net
 1. Configure your CDN domain: Enter your CDN domain name in the plugin's settings page (e.g., `abcd1234.cloudfront.net`, `cdn.example.com`, etc.).
 2. Publish your site: When you publish your site, the plugin searches for image tags in the rendered HTML and replaces them with your CDN domain name.
 
+### RSS Feed Images
+
+Enable **Use CDN for RSS Feed Images** to rewrite image URLs in Publii's Atom/RSS output. The option covers featured-image `media:content` entries and images embedded in feed summaries or full content. Feed links, entry IDs, and other non-image URLs keep the original site domain. The option is disabled by default.
+
 ### Push CDN
 
 1. Configure your CDN domain: Enter your CDN domain name in the plugin's settings page (e.g., `abcd1234.cloudfront.net`, `cdn.example.com`, etc.).

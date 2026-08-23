@@ -9,6 +9,7 @@ class CDN {
 
     addModifiers() {
         this.API.addModifier('htmlOutput', this.modifyHtmlOutput.bind(this), 999, this);
+        this.API.addModifier('feedXmlOutput', this.modifyFeedXmlOutput.bind(this), 999, this);
     }
 
     modifyHtmlOutput(renderer, htmlCode, globalContext, context) {
@@ -22,6 +23,31 @@ class CDN {
 
         return htmlCode;
     }
+
+    modifyFeedXmlOutput(renderer, xmlCode) {
+        if (!this.config.cdnFeedImages) {
+            return xmlCode;
+        }
+
+        return replaceFeedImageDomains(xmlCode, renderer.siteConfig.domain, this.config.url);
+    }
+}
+
+function replaceFeedImageDomains(xmlString, originalDomain, newDomain) {
+    return xmlString.replace(/<(?:media:content|img)\b[^>]*>/gi, tag => {
+        return tag.replace(/\b(src|srcset|url)=(['"])(.*?)\2/gi, (attribute, name, quote, value) => {
+            if (name.toLowerCase() === 'srcset') {
+                value = value
+                    .split(',')
+                    .map(candidate => replaceDomain(candidate.trim(), originalDomain, newDomain))
+                    .join(', ');
+            } else {
+                value = replaceDomain(value, originalDomain, newDomain);
+            }
+
+            return `${name}=${quote}${value}${quote}`;
+        });
+    });
 }
 
 function replaceGalleryLinks(htmlString, originalDomain, newDomain, elementSelector) {
