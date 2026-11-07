@@ -30,7 +30,7 @@ class CDN {
             return xmlCode;
         }
 
-        return replaceFeedImageDomains(xmlCode, renderer.siteConfig.domain, this.config.url);
+        return this.replaceFeedHtml(xmlCode, renderer.siteConfig.domain);
     }
 
     modifyFeedJsonOutput(renderer, jsonCode) {
@@ -38,17 +38,29 @@ class CDN {
             return jsonCode;
         }
 
-        return replaceJsonFeedImageDomains(jsonCode, renderer.siteConfig.domain, this.config.url);
+        return replaceJsonFeedImageDomains(jsonCode, renderer.siteConfig.domain, this.config.url, html => this.replaceFeedHtml(html, renderer.siteConfig.domain));
+    }
+
+    // Rewrites images, and gallery links when "Use CDN for Galleries" is on, in
+    // feed text: the whole feed.xml, or one content_html value from feed.json.
+    replaceFeedHtml(text, originalDomain) {
+        text = replaceFeedImageDomains(text, originalDomain, this.config.url);
+
+        if (this.config.cdnGalleries) {
+            text = replaceFeedGalleryLinks(text, originalDomain, this.config.url);
+        }
+
+        return text;
     }
 }
 
 // Rewrites image URLs in a JSON Feed (https://jsonfeed.org): the feed's icon and
-// favicon, and each item's image, banner_image and the images in content_html.
-// The feed is parsed rather than searched as text, because quotes inside
-// content_html are escaped. Links, IDs and attachments are not changed. If the
-// feed is not valid JSON (a theme's template can produce that) or nothing needs
-// to change, the original text is returned as is.
-function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain) {
+// favicon, and each item's image, banner_image and content_html (through
+// replaceHtml). The feed is parsed rather than searched as text, because quotes
+// inside content_html are escaped. Links, IDs and attachments are not changed.
+// If the feed is not valid JSON (a theme's template can produce that) or nothing
+// needs to change, the original text is returned as is.
+function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain, replaceHtml) {
     let feed;
 
     try {
@@ -87,33 +99,52 @@ function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain) {
 
             rewrite(item, 'image', replaceDomain);
             rewrite(item, 'banner_image', replaceDomain);
-            rewrite(item, 'content_html', replaceFeedImageDomains);
+            rewrite(item, 'content_html', replaceHtml);
         });
     }
 
     return changed ? JSON.stringify(feed, null, 4) : jsonString;
 }
 
-function replaceFeedImageDomains(xmlString, originalDomain, newDomain) {
-    // A tag runs to the first '>' that is not inside a quoted attribute value.
-    return xmlString.replace(/<(?:media:content|img)\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi, tag => {
-        // Walk the attributes in order, so text inside one attribute's value
-        // (for example alt="... src='...'") is never read as another attribute.
-        return tag.replace(/(\s)([^\s"'=\/>]+)(\s*=\s*)("[^"]*"|'[^']*'|[^\s"'>]+)/g, (attribute, space, name, equals, rawValue) => {
-            const attributeName = name.toLowerCase();
+// A tag runs to the first '>' that is not inside a quoted attribute value.
+const FEED_IMAGE_TAG = /<(?:media:content|img)\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi;
+const LINK_TAG = /<a\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi;
 
-            if (attributeName !== 'src' && attributeName !== 'srcset' && attributeName !== 'url') {
-                return attribute;
-            }
+// A Publii gallery item, the same markup Publii's own code matches:
+// <figure class="gallery__item"><a href="full-size.jpg"><img ...></a>...</figure>
+const GALLERY_ITEM = /(<figure\b(?=[^>]*\bclass\s*=\s*(?:"[^"]*\bgallery__item\b[^"]*"|'[^']*\bgallery__item\b[^']*'))[^>]*>)([\s\S]*?)(<\/figure\s*>)/gi;
 
-            const quote = rawValue[0] === '"' || rawValue[0] === "'" ? rawValue[0] : '';
-            const value = quote ? rawValue.slice(1, -1) : rawValue;
-            const newValue = attributeName === 'srcset'
-                ? replaceSrcset(value, originalDomain, newDomain)
-                : replaceDomain(value, originalDomain, newDomain);
+function replaceFeedImageDomains(text, originalDomain, newDomain) {
+    return text.replace(FEED_IMAGE_TAG, tag => replaceTagAttributes(tag, ['src', 'srcset', 'url'], originalDomain, newDomain));
+}
 
-            return space + name + equals + quote + newValue + quote;
-        });
+// Rewrites the links to full-size images inside gallery items. Feeds are handled
+// as text, so this matches Publii's gallery markup directly. The "Gallery item
+// link class" setting only applies to pages.
+function replaceFeedGalleryLinks(text, originalDomain, newDomain) {
+    return text.replace(GALLERY_ITEM, (item, open, inner, close) => {
+        return open + inner.replace(LINK_TAG, tag => replaceTagAttributes(tag, ['href'], originalDomain, newDomain)) + close;
+    });
+}
+
+// Rewrites the named URL attributes of one tag. The attributes are read in
+// order, so text inside one attribute's value (for example alt="... src='...'")
+// is never read as another attribute.
+function replaceTagAttributes(tag, names, originalDomain, newDomain) {
+    return tag.replace(/(\s)([^\s"'=\/>]+)(\s*=\s*)("[^"]*"|'[^']*'|[^\s"'>]+)/g, (attribute, space, name, equals, rawValue) => {
+        const attributeName = name.toLowerCase();
+
+        if (!names.includes(attributeName)) {
+            return attribute;
+        }
+
+        const quote = rawValue[0] === '"' || rawValue[0] === "'" ? rawValue[0] : '';
+        const value = quote ? rawValue.slice(1, -1) : rawValue;
+        const newValue = attributeName === 'srcset'
+            ? replaceSrcset(value, originalDomain, newDomain)
+            : replaceDomain(value, originalDomain, newDomain);
+
+        return space + name + equals + quote + newValue + quote;
     });
 }
 

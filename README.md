@@ -20,7 +20,9 @@ Enable **Use CDN for Feed Images** to rewrite image URLs in Publii's feeds:
 - RSS/Atom (`feed.xml`): featured-image `media:content` entries and `<img>` tags in feed summaries or full content.
 - JSON Feed (`feed.json`): the feed's `icon` and `favicon`, each item's `image` and `banner_image`, and `<img>` tags in `content_html`.
 
-Feed links, entry IDs, gallery links, attachments and other non-image URLs keep the original site domain. The option is disabled by default.
+With **Use CDN for Galleries** also on, links to full-size images in gallery items (`<figure class="gallery__item">`) are rewritten in both feeds. The **Gallery item link class** setting only applies to pages. Feeds always match Publii's gallery markup.
+
+Feed links, entry IDs, attachments and other non-image URLs keep the original site domain. The option is disabled by default.
 
 ### Push CDN
 
