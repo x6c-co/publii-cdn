@@ -64,14 +64,7 @@ function replaceImageDomains(htmlString, originalDomain, newDomain) {
         // Get the current srcset attribute
         let srcset = img.getAttribute('srcset');
         if (srcset) {
-            // Split the srcset into an array of URLs
-            const urls = srcset.split(',').map(url => url.trim());
-
-            // Replace the domain in each URL
-            const newUrls = urls.map(url => replaceDomain(url, originalDomain, newDomain));
-
-            // Join the array back into a string for the srcset attribute
-            img.setAttribute('srcset', newUrls.join(', '));
+            img.setAttribute('srcset', replaceSrcset(srcset, originalDomain, newDomain));
         }
     });
 
@@ -79,8 +72,45 @@ function replaceImageDomains(htmlString, originalDomain, newDomain) {
     return dom.serialize();
 }
 
+// Rewrites the URL of each srcset candidate. Only the URLs change: commas inside
+// URLs, descriptors and the original spacing are kept as they were.
+function replaceSrcset(srcset, originalDomain, newDomain) {
+    return srcset.replace(/(^|,)(\s*)(\S*[^\s,])/g, (match, separator, space, url) => {
+        return separator + space + replaceDomain(url, originalDomain, newDomain);
+    });
+}
+
+// Swaps the site domain for the CDN domain, but only when the URL starts with the
+// site domain followed by '/', '?', '#' or nothing. Anything else is returned as is.
 function replaceDomain(url, originalDomain, newDomain) {
-    return url.replace(originalDomain, newDomain);
+    const from = normalizeDomain(originalDomain);
+    let to = normalizeDomain(newDomain);
+
+    if (!url || !from || !to) {
+        return url;
+    }
+
+    // The README used to show the CDN setting without a scheme. Without one the
+    // result would be a relative path, so assume https.
+    if (!to.includes('://') && !to.startsWith('//')) {
+        to = 'https://' + to;
+    }
+
+    if (!url.startsWith(from)) {
+        return url;
+    }
+
+    const rest = url.slice(from.length);
+
+    if (rest !== '' && !/^[/?#]/.test(rest)) {
+        return url;
+    }
+
+    return to + rest;
+}
+
+function normalizeDomain(domain) {
+    return typeof domain === 'string' ? domain.trim().replace(/\/+$/, '') : '';
 }
 
 module.exports = CDN;
