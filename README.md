@@ -15,7 +15,7 @@ The CDN plugin for Publii simplifies the process of using a Content Delivery Net
 
 ### RSS Feed Images
 
-Enable **Use CDN for RSS Feed Images** to rewrite image URLs in Publii's Atom/RSS output. The option covers featured-image `media:content` entries and images embedded in feed summaries or full content. Feed links, entry IDs, and other non-image URLs keep the original site domain. The option is disabled by default.
+Enable **Use CDN for RSS Feed Images** to rewrite image URLs in Publii's Atom/RSS output (`feed.xml`). The option covers featured-image `media:content` entries and `<img>` tags in feed summaries or full content. Feed links, entry IDs, gallery links and other non-image URLs keep the original site domain. JSON Feed (`feed.json`) is not changed. The option is disabled by default.
 
 ### Push CDN
 

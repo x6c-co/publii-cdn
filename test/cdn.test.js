@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const { JSDOM } = require('jsdom');
 
@@ -41,7 +42,7 @@ const feed = `<?xml version="1.0" encoding="utf-8"?>
 </feed>`;
 
 test('declares RSS rewriting as an explicit opt-in checkbox', () => {
-    const manifest = JSON.parse(fs.readFileSync('plugin.json', 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'plugin.json'), 'utf8'));
     const field = manifest.config.find(item => item.name === 'cdnFeedImages');
 
     assert.deepEqual(field, {
@@ -105,4 +106,35 @@ test('does not rewrite similarly named domains or unrelated XML URL attributes',
     assert.match(output, /https:\/\/assets\.example\.com\/media\/other\.jpg/);
     assert.match(output, /<enclosure url="https:\/\/example\.com\/media\/audio\.mp3"/);
     assert.match(output, /<img src='https:\/\/cdn\.example\.net\/media\/image\.jpg'/);
+});
+
+test('handles srcset commas, quoted ">" and odd attribute formatting in feed images', () => {
+    const { modifiers } = createPlugin({
+        cdnFeedImages: true,
+        url: 'https://cdn.example.net'
+    });
+    const input = `<feed>
+      <img srcset="https://res.cloudinary.com/demo/w_300,h_200/a.jpg 300w" />
+      <img sizes="(width > 48em) 768px" srcset="https://example.com/media/b.jpg 768w" />
+      <img alt="x src='https://example.com/media/alt'" src="https://example.com/media/c.jpg" />
+      <img src = "https://example.com/media/d.jpg" />
+      <img src=https://example.com/media/e.jpg />
+    </feed>`;
+    const output = modifiers.get('feedXmlOutput').callback(renderer, input);
+
+    assert.match(output, /srcset="https:\/\/res\.cloudinary\.com\/demo\/w_300,h_200\/a\.jpg 300w"/);
+    assert.match(output, /srcset="https:\/\/cdn\.example\.net\/media\/b\.jpg 768w"/);
+    assert.match(output, /alt="x src='https:\/\/example\.com\/media\/alt'"/);
+    assert.match(output, /src="https:\/\/cdn\.example\.net\/media\/c\.jpg"/);
+    assert.match(output, /src = "https:\/\/cdn\.example\.net\/media\/d\.jpg"/);
+    assert.match(output, /src=https:\/\/cdn\.example\.net\/media\/e\.jpg /);
+});
+
+test('leaves the feed unchanged when the CDN URL is empty', () => {
+    const { modifiers } = createPlugin({
+        cdnFeedImages: true,
+        url: ''
+    });
+
+    assert.equal(modifiers.get('feedXmlOutput').callback(renderer, feed), feed);
 });
