@@ -117,22 +117,26 @@ function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain, repl
 
 // A tag runs to the first '>' that is not inside a quoted attribute value.
 const FEED_IMAGE_TAG = /<(?:media:content|img)\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi;
-const LINK_TAG = /<a\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi;
+// Not global: only the first link in a gallery item is matched.
+const FIRST_LINK_TAG = /<a\b(?:"[^"]*"|'[^']*'|[^"'>])*>/i;
 
 // A Publii gallery item, the same markup Publii's own code matches:
 // <figure class="gallery__item"><a href="full-size.jpg"><img ...></a>...</figure>
-const GALLERY_ITEM = /(<figure\b(?=[^>]*\bclass\s*=\s*(?:"[^"]*\bgallery__item\b[^"]*"|'[^']*\bgallery__item\b[^']*'))[^>]*>)([\s\S]*?)(<\/figure\s*>)/gi;
+// The content may not run past another <figure or the end of a CDATA block, so
+// a gallery item without </figure> cannot reach into the next feed entry.
+const GALLERY_ITEM = /(<figure\b(?=[^>]*\bclass\s*=\s*(?:"[^"]*\bgallery__item\b[^"]*"|'[^']*\bgallery__item\b[^']*'))[^>]*>)((?:(?!<figure\b|\]\]>)[\s\S])*?)(<\/figure\s*>)/gi;
 
 function replaceFeedImageDomains(text, originalDomain, newDomain) {
     return text.replace(FEED_IMAGE_TAG, tag => replaceTagAttributes(tag, ['src', 'srcset', 'url'], originalDomain, newDomain));
 }
 
-// Rewrites the links to full-size images inside gallery items. Feeds are handled
-// as text, so this matches Publii's gallery markup directly. The "Gallery item
-// link class" setting only applies to pages.
+// Rewrites the link to the full-size image in each gallery item: the first <a>,
+// which wraps the thumbnail. Other links, such as one in the caption, are left
+// alone. Feeds are handled as text, so this matches Publii's gallery markup
+// directly. The "Gallery item link class" setting only applies to pages.
 function replaceFeedGalleryLinks(text, originalDomain, newDomain) {
     return text.replace(GALLERY_ITEM, (item, open, inner, close) => {
-        return open + inner.replace(LINK_TAG, tag => replaceTagAttributes(tag, ['href'], originalDomain, newDomain)) + close;
+        return open + inner.replace(FIRST_LINK_TAG, tag => replaceTagAttributes(tag, ['href'], originalDomain, newDomain)) + close;
     });
 }
 

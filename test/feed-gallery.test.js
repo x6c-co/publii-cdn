@@ -75,3 +75,68 @@ test('handles gallery items with extra classes and single quotes', () => {
 
     assert.match(output, /<a class="x" href='https:\/\/cdn\.example\.net\/media\/a\.jpg'>/);
 });
+
+test('leaves links in gallery captions alone', () => {
+    const input = '<feed><content><![CDATA[<figure class="gallery__item">'
+        + '<a href="https://example.com/media/posts/1/gallery/one.jpg"><img src="https://example.com/media/posts/1/gallery/one-thumbnail.jpg"></a>'
+        + '<figcaption>See <a href="https://example.com/about/">about</a></figcaption></figure>]]></content></feed>';
+    const output = feedModifiers({ cdnGalleries: true }).xml(input);
+
+    assert.match(output, /<a href="https:\/\/cdn\.example\.net\/media\/posts\/1\/gallery\/one\.jpg">/);
+    assert.match(output, /<a href="https:\/\/example\.com\/about\/">about<\/a>/);
+});
+
+test('an unclosed gallery item does not reach into the next feed entry', () => {
+    const input = '<feed>'
+        + '<entry><content><![CDATA[<figure class="gallery__item"><a href="https://example.com/media/posts/1/gallery/a.jpg"><img src="https://example.com/media/posts/1/gallery/a-thumbnail.jpg"></a>]]></content></entry>'
+        + '<entry><content><![CDATA[<p><a href="https://example.com/p1/">see post 1</a></p><figure class="post__image"><a href="https://example.com/media/posts/2/x.jpg">x</a></figure>]]></content></entry>'
+        + '</feed>';
+    const output = feedModifiers({ cdnGalleries: true }).xml(input);
+
+    assert.match(output, /<a href="https:\/\/example\.com\/p1\/">/);
+    assert.match(output, /<a href="https:\/\/example\.com\/media\/posts\/2\/x\.jpg">/);
+});
+
+test('handles multi-line gallery markup from the block editor', () => {
+    const input = `<feed><content><![CDATA[
+<div class="gallery-wrapper">
+    <div class="gallery" data-columns="3">
+        <figure class="gallery__item">
+            <a href="https://example.com/media/posts/1/gallery/one.jpg" data-size="1200x800">
+                <img loading="lazy" src="https://example.com/media/posts/1/gallery/one-thumbnail.jpg" height="512" width="768" alt="">
+            </a>
+            <figcaption>One</figcaption>
+        </figure>
+    </div>
+</div>]]></content></feed>`;
+    const output = feedModifiers({ cdnGalleries: true }).xml(input);
+
+    assert.match(output, /<a href="https:\/\/cdn\.example\.net\/media\/posts\/1\/gallery\/one\.jpg" data-size="1200x800">/);
+    assert.match(output, /src="https:\/\/cdn\.example\.net\/media\/posts\/1\/gallery\/one-thumbnail\.jpg"/);
+});
+
+test('rewrites galleries in summaries and in every entry of feed.xml', () => {
+    const item = n => `<figure class="gallery__item"><a href="https://example.com/media/posts/${n}/gallery/big.jpg"><img src="https://example.com/media/posts/${n}/gallery/big-thumbnail.jpg"></a></figure>`;
+    const input = '<feed>'
+        + `<entry><summary type="html"><![CDATA[${item(1)}]]></summary><content type="html"><![CDATA[${item(1)}]]></content></entry>`
+        + `<entry><content type="html"><![CDATA[${item(2)}]]></content></entry>`
+        + '</feed>';
+    const output = feedModifiers({ cdnGalleries: true }).xml(input);
+
+    assert.equal(output.match(/href="https:\/\/cdn\.example\.net\/media\/posts\/1\/gallery\/big\.jpg"/g).length, 2);
+    assert.equal(output.match(/href="https:\/\/cdn\.example\.net\/media\/posts\/2\/gallery\/big\.jpg"/g).length, 1);
+    assert.doesNotMatch(output, /href="https:\/\/example\.com/);
+});
+
+test('rewrites galleries in feed.json summary', () => {
+    const summary = '<figure class="gallery__item"><a href="https://example.com/media/posts/1/gallery/big.jpg"><img src="https://example.com/media/posts/1/gallery/t.jpg"></a></figure>';
+    const output = feedModifiers({ cdnGalleries: true }).json(JSON.stringify({ items: [{ id: '1', summary }] }));
+
+    assert.match(JSON.parse(output).items[0].summary, /href="https:\/\/cdn\.example\.net\/media\/posts\/1\/gallery\/big\.jpg"/);
+});
+
+test('turning galleries on changes nothing when a feed has no gallery', () => {
+    const input = '<feed><content><![CDATA[<p><img src="https://example.com/media/a.jpg"> <a href="https://example.com/media/b.jpg">b</a></p>]]></content></feed>';
+
+    assert.equal(feedModifiers({ cdnGalleries: true }).xml(input), feedModifiers({ cdnGalleries: false }).xml(input));
+});
