@@ -10,6 +10,7 @@ class CDN {
     addModifiers() {
         this.API.addModifier('htmlOutput', this.modifyHtmlOutput.bind(this), 999, this);
         this.API.addModifier('feedXmlOutput', this.modifyFeedXmlOutput.bind(this), 999, this);
+        this.API.addModifier('feedJsonOutput', this.modifyFeedJsonOutput.bind(this), 999, this);
     }
 
     modifyHtmlOutput(renderer, htmlCode, globalContext, context) {
@@ -31,6 +32,75 @@ class CDN {
 
         return replaceFeedImageDomains(xmlCode, renderer.siteConfig.domain, this.config.url);
     }
+
+    modifyFeedJsonOutput(renderer, jsonCode) {
+        if (!this.config.cdnFeedImages) {
+            return jsonCode;
+        }
+
+        return replaceJsonFeedImageDomains(jsonCode, renderer.siteConfig.domain, this.config.url);
+    }
+}
+
+// Rewrites image URLs in a JSON Feed (https://jsonfeed.org): the feed's icon and
+// favicon, and each item's image, banner_image and the images in content_html
+// and summary. Publii puts HTML in summary when a post uses a read-more marker.
+// The feed is parsed rather than searched as text, because quotes inside
+// content_html are escaped. Links, IDs and attachments are not changed. If the
+// feed is not valid JSON (a theme's template can produce that) or nothing needs
+// to change, the original text is returned as is. Otherwise the feed is written
+// back as formatted JSON.
+function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain) {
+    let feed;
+
+    try {
+        feed = JSON.parse(jsonString);
+    } catch (error) {
+        console.warn('[CDN plugin] feed.json is not valid JSON, so its image URLs were not rewritten: ' + error.message);
+        return jsonString;
+    }
+
+    if (!feed || typeof feed !== 'object' || Array.isArray(feed)) {
+        return jsonString;
+    }
+
+    let changed = false;
+
+    const rewrite = (object, key, replace) => {
+        if (typeof object[key] !== 'string') {
+            return;
+        }
+
+        const value = replace(object[key], originalDomain, newDomain);
+
+        if (value !== object[key]) {
+            object[key] = value;
+            changed = true;
+        }
+    };
+
+    rewrite(feed, 'icon', replaceDomain);
+    rewrite(feed, 'favicon', replaceDomain);
+
+    if (Array.isArray(feed.items)) {
+        feed.items.forEach(item => {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            rewrite(item, 'image', replaceDomain);
+            rewrite(item, 'banner_image', replaceDomain);
+            rewrite(item, 'content_html', replaceFeedImageDomains);
+            rewrite(item, 'summary', replaceFeedImageDomains);
+        });
+    }
+
+    if (!changed) {
+        return jsonString;
+    }
+
+    // Keep the trailing newline (or other whitespace) the template ended with.
+    return JSON.stringify(feed, null, 4) + jsonString.match(/\s*$/)[0];
 }
 
 function replaceFeedImageDomains(xmlString, originalDomain, newDomain) {

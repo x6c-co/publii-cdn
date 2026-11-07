@@ -41,26 +41,28 @@ const feed = `<?xml version="1.0" encoding="utf-8"?>
   </entry>
 </feed>`;
 
-test('declares RSS rewriting as an explicit opt-in checkbox', () => {
+test('declares feed rewriting as an explicit opt-in checkbox', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'plugin.json'), 'utf8'));
     const field = manifest.config.find(item => item.name === 'cdnFeedImages');
 
     assert.deepEqual(field, {
         name: 'cdnFeedImages',
-        label: 'Use CDN for RSS Feed Images',
+        label: 'Use CDN for Feed Images',
         group: 'Asset Types',
         value: false,
         type: 'checkbox'
     });
 });
 
-test('registers HTML and XML feed modifiers at the existing priority', () => {
+test('registers HTML, XML feed and JSON feed modifiers at the existing priority', () => {
     const { plugin, modifiers } = createPlugin();
 
-    assert.deepEqual([...modifiers.keys()], ['htmlOutput', 'feedXmlOutput']);
+    assert.deepEqual([...modifiers.keys()], ['htmlOutput', 'feedXmlOutput', 'feedJsonOutput']);
     assert.equal(modifiers.get('htmlOutput').priority, 999);
     assert.equal(modifiers.get('feedXmlOutput').priority, 999);
     assert.equal(modifiers.get('feedXmlOutput').owner, plugin);
+    assert.equal(modifiers.get('feedJsonOutput').priority, 999);
+    assert.equal(modifiers.get('feedJsonOutput').owner, plugin);
 });
 
 test('leaves the feed byte-for-byte unchanged when the option is disabled', () => {

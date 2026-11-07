@@ -13,9 +13,14 @@ The CDN plugin for Publii simplifies the process of using a Content Delivery Net
 1. Configure your CDN domain: Enter your CDN domain name in the plugin's settings page (e.g., `https://abcd1234.cloudfront.net`, `https://cdn.example.com`, etc.).
 2. Publish your site: When you publish your site, the plugin searches for image tags in the rendered HTML and replaces them with your CDN domain name.
 
-### RSS Feed Images
+### Feed Images
 
-Enable **Use CDN for RSS Feed Images** to rewrite image URLs in Publii's Atom/RSS output (`feed.xml`). The option covers featured-image `media:content` entries and `<img>` tags in feed summaries or full content. Feed links, entry IDs, gallery links and other non-image URLs keep the original site domain. JSON Feed (`feed.json`) is not changed. The option is disabled by default.
+Enable **Use CDN for Feed Images** to rewrite image URLs in Publii's feeds:
+
+- RSS/Atom (`feed.xml`): featured-image `media:content` entries and `<img>` tags in feed summaries or full content.
+- JSON Feed (`feed.json`): the feed's `icon` and `favicon`, each item's `image` and `banner_image`, and `<img>` tags in `content_html` and `summary`. When something is rewritten, `feed.json` is saved as formatted JSON with 4-space indentation. If a theme's `feed-json.hbs` produces invalid JSON, `feed.json` is left unchanged and a warning is logged.
+
+Feed links, entry IDs, gallery links, attachments and other non-image URLs keep the original site domain. The option is disabled by default.
 
 ### Push CDN
 

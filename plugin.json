@@ -30,7 +30,7 @@
     },
     {
       "name": "cdnFeedImages",
-      "label": "Use CDN for RSS Feed Images",
+      "label": "Use CDN for Feed Images",
       "group": "Asset Types",
       "value": false,
       "type": "checkbox"
