@@ -1,9 +1,9 @@
 {
   "name": "CDN",
   "description": "A plugin to manage CDN services",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "author": "Levi",
-  "license": "GPL-3.0",
+  "license": "GPL-3.0-only",
   "scope": "site",
   "minimumPubliiVersion": "0.43.0",
   "config": [
