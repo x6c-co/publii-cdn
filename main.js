@@ -43,17 +43,20 @@ class CDN {
 }
 
 // Rewrites image URLs in a JSON Feed (https://jsonfeed.org): the feed's icon and
-// favicon, and each item's image, banner_image and the images in content_html.
+// favicon, and each item's image, banner_image and the images in content_html
+// and summary. Publii puts HTML in summary when a post uses a read-more marker.
 // The feed is parsed rather than searched as text, because quotes inside
 // content_html are escaped. Links, IDs and attachments are not changed. If the
 // feed is not valid JSON (a theme's template can produce that) or nothing needs
-// to change, the original text is returned as is.
+// to change, the original text is returned as is. Otherwise the feed is written
+// back as formatted JSON.
 function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain) {
     let feed;
 
     try {
         feed = JSON.parse(jsonString);
     } catch (error) {
+        console.warn('[CDN plugin] feed.json is not valid JSON, so its image URLs were not rewritten: ' + error.message);
         return jsonString;
     }
 
@@ -88,10 +91,16 @@ function replaceJsonFeedImageDomains(jsonString, originalDomain, newDomain) {
             rewrite(item, 'image', replaceDomain);
             rewrite(item, 'banner_image', replaceDomain);
             rewrite(item, 'content_html', replaceFeedImageDomains);
+            rewrite(item, 'summary', replaceFeedImageDomains);
         });
     }
 
-    return changed ? JSON.stringify(feed, null, 4) : jsonString;
+    if (!changed) {
+        return jsonString;
+    }
+
+    // Keep the trailing newline (or other whitespace) the template ended with.
+    return JSON.stringify(feed, null, 4) + jsonString.match(/\s*$/)[0];
 }
 
 function replaceFeedImageDomains(xmlString, originalDomain, newDomain) {

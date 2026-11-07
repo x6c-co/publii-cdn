@@ -93,11 +93,31 @@ test('leaves the JSON feed unchanged when the CDN URL is empty', () => {
     assert.equal(rewrite(feed), feed);
 });
 
-test('leaves invalid JSON unchanged', () => {
+test('leaves invalid JSON unchanged and logs a warning', t => {
+    const warn = t.mock.method(console, 'warn', () => {});
     const rewrite = jsonFeedModifier({ cdnFeedImages: true, url: 'https://cdn.example.net' });
-    const input = '{ "title": "C:\\path", "icon": "https://example.com/media/website/logo.png" ';
+    // Publii HTML-escapes titles but does not JSON-escape them, so a backslash breaks the feed.
+    const input = '{ "title": "C:\\Users", "icon": "https://example.com/media/website/logo.png" }';
 
     assert.equal(rewrite(input), input);
+    assert.equal(warn.mock.callCount(), 1);
+    assert.match(warn.mock.calls[0].arguments[0], /feed\.json is not valid JSON/);
+});
+
+test('rewrites images in an HTML summary (posts with a read-more marker)', () => {
+    const rewrite = jsonFeedModifier({ cdnFeedImages: true, url: 'https://cdn.example.net' });
+    const input = JSON.stringify({ items: [{ id: '1', summary: '<p>Intro</p><img src="https://example.com/media/posts/1/a.jpg">' }] });
+    const item = JSON.parse(rewrite(input)).items[0];
+
+    assert.equal(item.summary, '<p>Intro</p><img src="https://cdn.example.net/media/posts/1/a.jpg">');
+});
+
+test('keeps the trailing newline when the JSON feed is rewritten', () => {
+    const rewrite = jsonFeedModifier({ cdnFeedImages: true, url: 'https://cdn.example.net' });
+    const output = rewrite(feed + '\n');
+
+    assert.ok(output.endsWith('}\n'));
+    assert.equal(JSON.parse(output).icon, 'https://cdn.example.net/media/website/logo.png');
 });
 
 test('does not change attachments', () => {
