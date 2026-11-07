@@ -29,6 +29,13 @@
       "type": "checkbox"
     },
     {
+      "name": "cdnFeedImages",
+      "label": "Use CDN for RSS Feed Images",
+      "group": "Asset Types",
+      "value": false,
+      "type": "checkbox"
+    },
+    {
       "name": "galleryItemSelector",
       "label": "Gallery item link class",
       "group": "Selectors",
