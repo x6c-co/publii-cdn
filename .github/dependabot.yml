@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Publii runs plugins on the Node version built into its Electron app.
+      # jsdom 26 runs on Publii 0.43.0 and newer (Node 18.16). jsdom 27-29
+      # need Publii 0.47.0+ (Node 22.19), and 30+ need Publii 0.47.7+
+      # (Node 24.17). Upgrade jsdom by hand together with
+      # minimumPubliiVersion in plugin.json and the Node versions in
+      # .github/workflows/test.yml.
+      - dependency-name: jsdom
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
