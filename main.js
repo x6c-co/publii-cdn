@@ -34,18 +34,24 @@ class CDN {
 }
 
 function replaceFeedImageDomains(xmlString, originalDomain, newDomain) {
-    return xmlString.replace(/<(?:media:content|img)\b[^>]*>/gi, tag => {
-        return tag.replace(/\b(src|srcset|url)=(['"])(.*?)\2/gi, (attribute, name, quote, value) => {
-            if (name.toLowerCase() === 'srcset') {
-                value = value
-                    .split(',')
-                    .map(candidate => replaceDomain(candidate.trim(), originalDomain, newDomain))
-                    .join(', ');
-            } else {
-                value = replaceDomain(value, originalDomain, newDomain);
+    // A tag runs to the first '>' that is not inside a quoted attribute value.
+    return xmlString.replace(/<(?:media:content|img)\b(?:"[^"]*"|'[^']*'|[^"'>])*>/gi, tag => {
+        // Walk the attributes in order, so text inside one attribute's value
+        // (for example alt="... src='...'") is never read as another attribute.
+        return tag.replace(/(\s)([^\s"'=\/>]+)(\s*=\s*)("[^"]*"|'[^']*'|[^\s"'>]+)/g, (attribute, space, name, equals, rawValue) => {
+            const attributeName = name.toLowerCase();
+
+            if (attributeName !== 'src' && attributeName !== 'srcset' && attributeName !== 'url') {
+                return attribute;
             }
 
-            return `${name}=${quote}${value}${quote}`;
+            const quote = rawValue[0] === '"' || rawValue[0] === "'" ? rawValue[0] : '';
+            const value = quote ? rawValue.slice(1, -1) : rawValue;
+            const newValue = attributeName === 'srcset'
+                ? replaceSrcset(value, originalDomain, newDomain)
+                : replaceDomain(value, originalDomain, newDomain);
+
+            return space + name + equals + quote + newValue + quote;
         });
     });
 }
